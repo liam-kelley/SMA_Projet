@@ -47,9 +47,13 @@ class Team:
             else:
                 self.hand.append(self.deck.pop())
 
+    def add_new_card_to_deck(self,card):
+        self.deck.append(card)
+
 class PillarAgent(mesa.Agent):
     """
     A pillar agent. Has a height ranging from 0 to self.model.max_pillar_height
+    A pillar must be an agent to be visualized in mesa.
     Pillars aren't scheduled.
     """
 
@@ -155,10 +159,13 @@ class GameModel(mesa.Model):
     """
     The model for the pillar game.
     The game plays on a Grid space.
-    Players for each team try and build pillars to reach the top of the center pillar.
+    Players/"GamerAgents" for each team try and build pillars to reach the top of the center pillar.
     By default the center pillar is of height 7. All other pillars are initialized at height 0.
 
-    Players will have multiple varying actions they can play each round.
+    Players of a team have access to hand which is shared amongst all team members.
+    This hand will have a certain amount of cards in it. These can currently be MOVE or a BUILD_PILLAR cards.
+    If a player from the team uses up a card, then that card will become unavailable to the other players until the hand is re-drawn.
+    Additionnal cards can be added to each team's deck.
 
     You can access grid cell content using self.grid.grid[x][y].
     A grid cell will contain a pillar and a certain amount of players (0-1)
