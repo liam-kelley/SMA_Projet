@@ -138,6 +138,10 @@ class GamerAgent(mesa.Agent):
         elif chosen_card==Card.BUILD_PILLAR:
             self.random_build_pillar()
 
+        self.update_height()
+        if self.height==self.model.max_pillar_height:
+            self.model.running=False
+
     def portrayal_method(self):
         portrayal = {"Shape": "circle",
                      "Filled": "true",
