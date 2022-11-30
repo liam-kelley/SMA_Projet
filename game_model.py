@@ -17,6 +17,9 @@ class Color(Enum):
     RED = enum.auto(),
     BLUE = enum.auto()
 
+class AI(Enum):
+    RANDOM = enum.auto()
+
 class Card(Enum):
     MOVE = enum.auto(),
     BUILD_PILLAR = enum.auto()
@@ -26,12 +29,13 @@ class Team:
     The Team class manages the decks which are common to all agents of a given team.
     The team class currently has no information on which agents are on which team.
     """
-    def __init__(self,color=Color.RED,hand_size=3):
+    def __init__(self,color=Color.RED,hand_size=3,ai=AI.RANDOM):
         self.color=color
         self.hand_size=hand_size
         self.deck=[] #list of cards
         self.hand=[] #list of cards
         self.discard=[] #list of cards
+        self.ai=ai #can be : [AI.RANDOM]
     
     def shuffle_deck_from_discard(self):
         print("Team ", self.color, " is shuffling their deck from their discard pile!")
@@ -133,12 +137,12 @@ class GamerAgent(mesa.Agent):
         if len(self.team.hand) ==0 : self.team.draw_new_hand()
         
         # AI START
-        chosen_card=self.random.choice(self.team.hand)
-
-        if chosen_card==Card.MOVE:
-            self.random_move()
-        elif chosen_card==Card.BUILD_PILLAR:
-            self.random_build_pillar()
+        if self.team.ai==AI.RANDOM:
+            chosen_card=self.random.choice(self.team.hand)
+            if chosen_card==Card.MOVE:
+                self.random_move()
+            elif chosen_card==Card.BUILD_PILLAR:
+                self.random_build_pillar()
         # AI END
 
         self.team.discard.append(chosen_card)
@@ -183,8 +187,8 @@ class GameModel(mesa.Model):
         self.pillars=np.zeros((width,height),dtype=int).tolist()
 
         '''Initialize Teams'''
-        self.teams=[Team(Color.RED,hand_size=num_gamers_per_team),
-                    Team(Color.BLUE,hand_size=num_gamers_per_team)]
+        self.teams=[Team(Color.RED,hand_size=num_gamers_per_team,ai=AI.RANDOM),
+                    Team(Color.BLUE,hand_size=num_gamers_per_team,ai=AI.RANDOM)]
         for team in self.teams:
             '''Initialize team decks'''
             for _ in range(team.hand_size):
