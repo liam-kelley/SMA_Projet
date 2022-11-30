@@ -128,19 +128,21 @@ class GamerAgent(mesa.Agent):
        
     def step(self):
         print("Hi, I am GamerAgent " + str(self.unique_id) + " working for team ", self.team.color ,"and I'm doing my step.")
-        self.update_height() # Get current height
 
-        if len(self.team.hand) ==0 : #if hand is empty
-            self.team.draw_new_hand()
+        self.update_height()
+        if len(self.team.hand) ==0 : self.team.draw_new_hand()
         
+        # AI START
         chosen_card=self.random.choice(self.team.hand)
-        self.team.discard.append(chosen_card)
-        self.team.hand.remove(chosen_card)
 
         if chosen_card==Card.MOVE:
             self.random_move()
         elif chosen_card==Card.BUILD_PILLAR:
             self.random_build_pillar()
+        # AI END
+
+        self.team.discard.append(chosen_card)
+        self.team.hand.remove(chosen_card)
 
         self.update_height()
         if self.height==self.model.max_pillar_height:
