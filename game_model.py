@@ -40,6 +40,7 @@ class Message:
         self.importance=importance
         # self.intention=
 
+
 class Team:
     """
     The Team class manages the decks which are common to all agents of a given team.
@@ -120,6 +121,7 @@ class PillarAgent(mesa.Agent):
                      "Color": self.height_to_hex()}
 
         return portrayal
+
 
 class GamerAgent(mesa.Agent):
     """
@@ -218,38 +220,8 @@ class GamerAgent(mesa.Agent):
         if raise_errors: raise(Exception("There is an agent in this cell."))
         return(False)
 
-    def set_as_first_initiative(self):
+    def use_card_as_initiative_setter(self):
         self.team.move_agent_to_first_initiative(self)
-
-    def random_move(self):
-        '''
-        This function finds the neighboring available cells (no other agents and pillar height distance <=1) where the player can move,
-        and then moves there if there is an available option.
-        '''
-        neighborhood_cells = self.model.grid.get_neighborhood(self.pos,moore=False, include_center=False) # Moore = avec diagonales. 
-        available_moves = []
-        for cell in neighborhood_cells: # Les "cell" retournées sont des tuples de pos.
-            if self.move_action(cell, test=True):
-                available_moves.append(cell)
-        try:
-            cell = self.random.choice(available_moves)
-            self.move_action(cell)
-        except IndexError: print("I can't move! No available cells.")
-
-    def random_build_pillar(self):
-        '''
-        This function finds the neighboring available cells (no other agents + not too high) where a pillar can be built,
-        and then builds there if there is an available option.
-        '''
-        neighborhood_cells = self.model.grid.get_neighborhood(self.pos,moore=False, include_center=False) # Moore = avec diagonales. 
-        available_cells = []
-        for cell in neighborhood_cells: # Les "cell" retournées sont des tuples de pos.
-            if self.build_pillar_action(cell, test=True):
-                available_cells.append(cell)
-        try:
-            cell = self.random.choice(available_cells)
-            self.build_pillar_action(cell)
-        except(IndexError): print("I can't build! No available cells.")
 
     def print_current_status(self):
         print("STATUS - ", end="")
@@ -265,82 +237,128 @@ class GamerAgent(mesa.Agent):
         if self.height==self.model.max_pillar_height:
             self.model.running=False
 
-    def step(self):
+    def random_move(self):
+        '''
+        This function finds the neighboring available cells where the player can move
+        aka where (no other agents and pillar height distance <=1) 
+        and then moves there if there is an available option.
 
-        self.update_height()
-        self.update_initiative()
-        if len(self.team.hand) ==0 : self.team.draw_new_hand()
-        self.print_current_status()
+        If there are no available options, it sets initiative to 0 instead.
+        '''
+        neighborhood_cells = self.model.grid.get_neighborhood(self.pos,moore=False, include_center=False) # Moore = avec diagonales. 
+        available_moves = []
+        for cell in neighborhood_cells: # Les "cell" retournées sont des tuples de pos.
+            if self.move_action(cell, test=True):
+                available_moves.append(cell)
+        try:
+            cell = self.random.choice(available_moves)
+            self.move_action(cell)
+        except IndexError:
+            print("I can't move! No available cells.")
+            self.use_card_as_initiative_setter()
 
-        # AI START
+    def random_build_pillar(self):
+        '''
+        This function finds the neighboring available cells where a pillar can be built
+        aka where (no other agents + not too high) 
+        and then builds there if there is an available option.
+
+        If there are no available options, it sets initiative to 0 instead.
+        '''
+        neighborhood_cells = self.model.grid.get_neighborhood(self.pos,moore=False, include_center=False) # Moore = avec diagonales. 
+        available_cells = []
+        for cell in neighborhood_cells: # Les "cell" retournées sont des tuples de pos.
+            if self.build_pillar_action(cell, test=True):
+                available_cells.append(cell)
+        try:
+            cell = self.random.choice(available_cells)
+            self.build_pillar_action(cell)
+        except(IndexError):
+            print("I can't build! No available cells.")
+            self.use_card_as_initiative_setter()
+
+    def random_AI(self):
+        '''
+        Random AI.
+        Chooses a random card to play, and plays it randomly.
+        If the card cannot be played, it sets its initiave to 0.
+        '''
+        chosen_card=self.random.choice(self.team.hand)
+        if chosen_card==Card.MOVE:
+            self.random_move()
+        elif chosen_card==Card.BUILD_PILLAR:
+            self.random_build_pillar()
+        return(chosen_card)
+
+    def reactive_AI(self):
+        '''
+        Purely Reactive AI. Previously known as AI.GOTTA_STAY_HIGH.
+        Always tries to get higher, or builds to get higher, and avoids moving lower.
+        Doesn't necessarily try to get to the middle of the board.
+        '''
         chosen_card=None
 
-        if self.team.ai==AI.RANDOM:
-            '''
-            Random AI.
-            Chooses a random card to play, and plays it randomly.
-            If the card cannot be played, it sets its initiave to 0.
-            '''
-            chosen_card=self.random.choice(self.team.hand)
-            if chosen_card==Card.MOVE:
+        neighborhood_cells = self.model.grid.get_neighborhood(self.pos,moore=False, include_center=False)
+
+        advantageous_cells=[]
+        for cell in neighborhood_cells:
+            if self.move_action(cell, test=True) and self.model.pillars[cell[0]][cell[1]].height - self.height == 1: 
+                advantageous_cells.append(cell)
+
+        upgradable_cells=[]
+        for cell in neighborhood_cells:
+            if self.build_pillar_action(cell, test=True) and (self.model.pillars[cell[0]][cell[1]].height - self.height == 0): 
+                upgradable_cells.append(cell)
+
+        lower_cells=[]
+        for cell in neighborhood_cells:
+            if self.build_pillar_action(cell, test=True) and (self.model.pillars[cell[0]][cell[1]].height - self.height < 0): 
+                lower_cells.append(cell)
+
+        same_level_cells=[]
+        for cell in neighborhood_cells:
+            if self.move_action(cell, test=True) and (self.model.pillars[cell[0]][cell[1]].height - self.height == 0): 
+                same_level_cells.append(cell)
+
+        try:
+            if advantageous_cells and Card.MOVE in self.team.hand : # First check if there is any pillar you can move up upon.
+                chosen_card = Card.MOVE
+                cell = self.random.choice(advantageous_cells)
+                self.move_action(cell,raise_errors=True)
+            elif upgradable_cells and Card.BUILD_PILLAR in self.team.hand : # Then check if you can make a pillar to move up upon.
+                chosen_card = Card.BUILD_PILLAR
+                cell = self.random.choice(upgradable_cells)
+                self.build_pillar_action(cell,raise_errors=True)
+            elif lower_cells and Card.BUILD_PILLAR in self.team.hand : # Then check if there are any pillars to build which won't block you.
+                chosen_card = Card.BUILD_PILLAR
+                cell = self.random.choice(lower_cells)
+                self.build_pillar_action(cell,raise_errors=True)
+            elif same_level_cells and Card.MOVE in self.team.hand : # Then check if you can move horizontally to another pillar.
+                chosen_card = Card.MOVE
+                cell = self.random.choice(same_level_cells)
+                self.move_action(cell,raise_errors=True)
+            elif Card.MOVE in self.team.hand : # Then try moving anywhere (down).
+                chosen_card = Card.MOVE
                 self.random_move()
-            elif chosen_card==Card.BUILD_PILLAR:
+            elif Card.BUILD_PILLAR in self.team.hand : # Then try building anywhere (blocking yourself).
+                chosen_card = Card.BUILD_PILLAR
                 self.random_build_pillar()
-                
-        if self.team.ai==AI.REACTIVE:
-            '''
-            Purely Reactive AI. Previously known as AI.GOTTA_STAY_HIGH.
-            Always tries to get higher, or builds to get higher, and avoids moving lower.
-            Doesn't necessarily try to get to the middle of the board.
-            '''
-            neighborhood_cells = self.model.grid.get_neighborhood(self.pos,moore=False, include_center=False)
+        except Exception as e:
+            print("EXCEPTION! ", e)
+        
+        return(chosen_card)
 
-            advantageous_cells=[]
-            for cell in neighborhood_cells:
-                if self.move_action(cell, test=True) and self.model.pillars[cell[0]][cell[1]].height - self.height == 1: 
-                    advantageous_cells.append(cell)
+    def step(self):
+        self.update_height()
+        self.update_initiative() #initiative has no practical purpose, but it could be used by an AI as additionnal info idk.
+        
+        if len(self.team.hand) ==0 : self.team.draw_new_hand()
 
-            upgradable_cells=[]
-            for cell in neighborhood_cells:
-                if self.build_pillar_action(cell, test=True) and (self.model.pillars[cell[0]][cell[1]].height - self.height == 0): 
-                    upgradable_cells.append(cell)
+        self.print_current_status()
 
-            lower_cells=[]
-            for cell in neighborhood_cells:
-                if self.build_pillar_action(cell, test=True) and (self.model.pillars[cell[0]][cell[1]].height - self.height < 0): 
-                    lower_cells.append(cell)
-
-            same_level_cells=[]
-            for cell in neighborhood_cells:
-                if self.move_action(cell, test=True) and (self.model.pillars[cell[0]][cell[1]].height - self.height == 0): 
-                    same_level_cells.append(cell)
-
-            try:
-                if advantageous_cells and Card.MOVE in self.team.hand : # First check if there is any pillar you can move up upon.
-                    chosen_card = Card.MOVE
-                    cell = self.random.choice(advantageous_cells)
-                    self.move_action(cell,raise_errors=True)
-                elif upgradable_cells and Card.BUILD_PILLAR in self.team.hand : # Then check if you can make a pillar to move up upon.
-                    chosen_card = Card.BUILD_PILLAR
-                    cell = self.random.choice(upgradable_cells)
-                    self.build_pillar_action(cell,raise_errors=True)
-                elif lower_cells and Card.BUILD_PILLAR in self.team.hand : # Then check if there are any pillars to build which won't block you.
-                    chosen_card = Card.BUILD_PILLAR
-                    cell = self.random.choice(lower_cells)
-                    self.build_pillar_action(cell,raise_errors=True)
-                elif same_level_cells and Card.MOVE in self.team.hand : # Then check if you can move horizontally to another pillar.
-                    chosen_card = Card.MOVE
-                    cell = self.random.choice(same_level_cells)
-                    self.move_action(cell,raise_errors=True)
-                elif Card.MOVE in self.team.hand : # Then try moving anywhere (down).
-                    chosen_card = Card.MOVE
-                    self.random_move()
-                elif Card.BUILD_PILLAR in self.team.hand : # Then try building anywhere (blocking yourself).
-                    chosen_card = Card.BUILD_PILLAR
-                    self.random_build_pillar()
-            except Exception as e:
-                print("EXCEPTION! ", e)
-        # AI END
+        chosen_card=None
+        if self.team.ai==AI.RANDOM: chosen_card=self.random_AI()        
+        elif self.team.ai==AI.REACTIVE: chosen_card=self.reactive_AI()
 
         self.team.discard_card(chosen_card)
         self.check_win_condition()
@@ -353,6 +371,7 @@ class GamerAgent(mesa.Agent):
         if self.team.color == Color.RED: portrayal["Color"] = "red"
         else: portrayal["Color"] = "blue"
         return portrayal
+
 
 class GameModel(mesa.Model):
     """
@@ -378,7 +397,7 @@ class GameModel(mesa.Model):
 
         self.num_gamers_per_team = num_gamers_per_team
         self.max_pillar_height=max_pillar_height
-        self.teams=self.init_teams(AI=[AI.REACTIVE,AI.REACTIVE])
+        self.teams=self.init_teams(AI=[AI.RANDOM,AI.REACTIVE])
         self.pillars=self.init_pillars()
         self.init_gamerAgents()
         
