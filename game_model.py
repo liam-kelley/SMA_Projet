@@ -81,9 +81,10 @@ class Team:
 
 class PillarAgent(mesa.Agent):
     """
-    A pillar agent. Has a height ranging from 0 to self.model.max_pillar_height
+    A pillar agent.
+    Has a height ranging from 0 to self.model.max_pillar_height -1 except the center pillar which has a height of max_pillar_height.
     A pillar must be an agent to be visualized in mesa.
-    Pillars aren't scheduled.
+    Pillars aren't scheduled in the scheduler.
     """
 
     def __init__(self, unique_id, model,height):
@@ -111,13 +112,53 @@ class PillarAgent(mesa.Agent):
         return portrayal
 
 class GamerAgent(mesa.Agent):
-    """A game agent. Has a team."""
+    """
+    A gamer agent. There are multiple GamerAgents per team.
+    They each act in turn according to their (unique) initiative.
+    Initiave 0 acts first, then initiative 1, then 2 ...
+    A gamer agent stands on pillars of varying heights.
+
+    A GamerAgent must stand on top on the highest center pillar for his team to win.
+    To do that, it can take move_actions, build_pillar_actions, change its initiative, and send intention and desire messages to its teammates.
+    It can't just choose which action it takes though.
+
+    Each team has a deck of cards. This deck is initialized with (num_gamers_per_team) MOVE cards and (num_gamers_per_team) BUILD_PILLAR cards.
+    The team will draw a hand of (num_gamers_per_team) cards.
+    So for 3 players, a hand can look like: Card.MOVE * 3, or Card.MOVE * 2 + Card.BUILD_PILLAR, or Card.MOVE + Card.BUILD_PILLAR * 2, or Card.BUILD_PILLAR * 3
+
+    When each GamerAgent takes his step, he must choose a card from the remaining cards in the hand.
+    So in our example, the 1st acting gamerAgent has 3 cards to choose from, the 2nd acting gamerAgent has 2 cards to choose from,
+    and the 3rd only has one card to choose from.
+
+    With his chosen_card, the GamerAgent can either:
+    -use the card's corresponding action (move_action to a nearby cell, build_pillar_action on a nearby cell)
+    -or NOT use the corresponding action and instead change his initiative to 0 (first) to play first on the next "turn".
+    
+    Whatever he does with his card, the agent can then send out messages on his team's message_pile.
+    Maybe next turn he needs a specific card so the others shouldn't use them, or maybe he really wants to go
+    first next turn and would rather no one else NOT use their card after him, robbing him of his first/0 initiave.
+
+    As of right now, two possible AI's are coded, neither of them making use of messages or using initiative intelligently, or trying to block the enemy team.
+
+    AI.RANDOM uses a random card, and uses the corresponding action randomly.
+    If the corresponding card cannot be played (no space to build or move), it changes its initiative.
+
+    AI.REACTIVE always tries to get higher, or builds to get higher, and avoids moving lower.
+    Changes its initiative only to avoid getting lower or blocking itself by building.
+    """
 
     def __init__(self, unique_id, model,team=Team(Color.RED),initiative=0):
         super().__init__(unique_id, model)
         self.team = team
         self.height = 0
         self.initiative = initiative
+
+    def __lt__(self, other):
+        '''
+        Overloading/Creating a less than operator between two gamer agents.
+        This is to sort them according to their initiave using python's sort().
+        '''
+        return(self.initiative < other.initiative)
 
     def update_height(self):
         '''Reads current height from the pillar the agent is standing on.'''
@@ -213,7 +254,8 @@ class GamerAgent(mesa.Agent):
         if self.team.ai==AI.RANDOM:
             '''
             Random AI.
-            Chooses a random card to play, and plays it. (This will sometimes make the player do nothing.)
+            Chooses a random card to play, and plays it randomly.
+            If the card cannot be played, it sets its initiave to 0.
             '''
             chosen_card=self.random.choice(self.team.hand)
             if chosen_card==Card.MOVE:
@@ -372,7 +414,9 @@ class GameModel(mesa.Model):
         )
 
     def update_initiatives(self):
-        while 
+        for agent in self.gamer_list:
+            self.schedule.remove(agent)
+        
     
     def step(self):
         """Advance the model by one step."""
