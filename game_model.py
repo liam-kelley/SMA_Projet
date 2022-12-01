@@ -52,7 +52,8 @@ class Team:
         self.hand=[] #list of cards
         self.discard=[] #list of cards
         self.ai=ai #can be : [AI.RANDOM, AI.REACTIVE]
-        self.message_pile=[]
+        self.message_pile=[] #pile of Messages
+        self.initiative_queue=[] # Queue of agents
     
     def shuffle_deck_from_discard(self):
         print("Team ", self.color, " is shuffling their deck from their discard pile!")
@@ -71,6 +72,10 @@ class Team:
     def add_new_card_to_deck(self,card):
         self.deck.append(card)
 
+    def discard_card(self,card):
+        self.discard.append(card)
+        self.hand.remove(card)
+
     def clear_agent_messages_from_pile(self, agent_id):
         messages_to_remove=[]
         for message in self.message_pile:
@@ -78,6 +83,11 @@ class Team:
                 messages_to_remove.append(message)
         for message in messages_to_remove:
             self.message_pile.remove(message)
+    
+    def move_agent_to_first_initiative(self,agent):
+        self.initiative_queue.remove(agent)
+        self.initiative_queue.insert(0,agent)
+
 
 class PillarAgent(mesa.Agent):
     """
@@ -147,22 +157,27 @@ class GamerAgent(mesa.Agent):
     Changes its initiative only to avoid getting lower or blocking itself by building.
     """
 
-    def __init__(self, unique_id, model,team=Team(Color.RED),initiative=0):
+    def __init__(self, unique_id, model,team=Team(Color.RED)):
         super().__init__(unique_id, model)
         self.team = team
         self.height = 0
-        self.initiative = initiative
+        self.initiative = 0
 
     def __lt__(self, other):
         '''
         Overloading/Creating a less than operator between two gamer agents.
         This is to sort them according to their initiave using python's sort().
+        This isn't currently used.
         '''
         return(self.initiative < other.initiative)
 
     def update_height(self):
-        '''Reads current height from the pillar the agent is standing on.'''
+        '''Updates current height from the pillar the agent is standing on.'''
         self.height = self.model.pillars[self.pos[0]][self.pos[1]].height
+
+    def update_initiative(self):
+        '''Updates current initiative from the team's initiative queue'''
+        self.initiative=self.team.initiative_queue.index(self)
 
     def move_action(self, cell, test=False, raise_errors=False):
         '''
@@ -203,6 +218,9 @@ class GamerAgent(mesa.Agent):
         if raise_errors: raise(Exception("There is an agent in this cell."))
         return(False)
 
+    def set_as_first_initiative(self):
+        self.team.move_agent_to_first_initiative(self)
+
     def random_move(self):
         '''
         This function finds the neighboring available cells (no other agents and pillar height distance <=1) where the player can move,
@@ -241,11 +259,17 @@ class GamerAgent(mesa.Agent):
         for card in self.team.hand:
             print(card, end=" , ")
         print("")
-        
-    def step(self):
+
+    def check_win_condition(self):
         self.update_height()
+        if self.height==self.model.max_pillar_height:
+            self.model.running=False
+
+    def step(self):
+
+        self.update_height()
+        self.update_initiative()
         if len(self.team.hand) ==0 : self.team.draw_new_hand()
-        
         self.print_current_status()
 
         # AI START
@@ -318,13 +342,8 @@ class GamerAgent(mesa.Agent):
                 print("EXCEPTION! ", e)
         # AI END
 
-        '''Manage getting rid of chosen card'''
-        self.team.discard.append(chosen_card)
-        self.team.hand.remove(chosen_card)
-
-        self.update_height()
-        if self.height==self.model.max_pillar_height:
-            self.model.running=False
+        self.team.discard_card(chosen_card)
+        self.check_win_condition()
 
     def portrayal_method(self):
         portrayal = {"Shape": "circle",
@@ -353,51 +372,67 @@ class GameModel(mesa.Model):
     """
 
     def __init__(self, num_gamers_per_team, width, height, max_pillar_height=7):
-        self.num_gamers_per_team = num_gamers_per_team
         self.grid = mesa.space.MultiGrid(width, height, False)
-        self.schedule = mesa.time.BaseScheduler(self) #Each player will play turn by turn
-        self.running = True # This variable enables conditional shut off of the model once a condition is met. (usually for batch run, or win condition)
+        self.schedule = mesa.time.BaseScheduler(self) # Sequential scheduler.
+        self.running = True
+
+        self.num_gamers_per_team = num_gamers_per_team
         self.max_pillar_height=max_pillar_height
+        self.teams=self.init_teams(AI=[AI.REACTIVE,AI.REACTIVE])
+        self.pillars=self.init_pillars()
+        self.init_gamerAgents()
+        
+        self.datacollector = mesa.DataCollector(
+            model_reporters={},
+            agent_reporters={}
+        )
 
-        self.gamer_list=[] #used to update initiatives.
-        self.pillars=np.zeros((width,height),dtype=int).tolist()
-
-        '''Initialize Teams'''
-        self.teams=[Team(Color.RED,hand_size=num_gamers_per_team,ai=AI.RANDOM),
-                    Team(Color.BLUE,hand_size=num_gamers_per_team,ai=AI.REACTIVE)]
-        for team in self.teams:
-            '''Initialize team decks'''
+    def init_teams(self,AI=[AI.RANDOM,AI.REACTIVE]):
+        '''Initialize Teams, team decks, and team hands.'''
+        teams=[Team(Color.RED , hand_size=self.num_gamers_per_team, ai=AI[0]),
+               Team(Color.BLUE, hand_size=self.num_gamers_per_team, ai=AI[1])]
+        for team in teams:
+            #Initialize team decks
             for _ in range(team.hand_size):
                 team.deck.append(Card.MOVE)
                 team.deck.append(Card.BUILD_PILLAR)
-            self.random.shuffle(team.deck)
-            '''Initialize team hands'''
+            random.shuffle(team.deck)
+            #Initialize team hands
             for _ in range(team.hand_size): #hand size is equal to the number of players per team.
                 team.hand.append(team.deck.pop())
+        return(teams)
 
-        '''Initialize Pillar list.'''
+    def init_pillars(self):
+        '''
+        Initialize Pillars as agents and initialize pillar list.
+        There is one pillar per cell.
+        All pillars are of height 0, except the central pillar which is of max height.
+        '''
+        pillars=np.zeros((self.grid.width,self.grid.height),dtype=int).tolist()
         grid_length=self.grid.width*self.grid.height
         for unique_id in range(grid_length): # In mesa, we must add each pillar as agents to the grid to visualize them.
             pillar = PillarAgent(unique_id, self,height=0)
-            # self.schedule.add(pillar) # Pillars aren't activated, they don't do anything.
+            # Pillars aren't activated, they don't do anything, so they aren't scheduled.
 
             # Add the Pillar Agent to each grid cell
             x = unique_id%self.grid.width
             y = unique_id//self.grid.width
             self.grid.place_agent(pillar, (x,y))
-            self.pillars[x][y]=pillar
+            pillars[x][y]=pillar
+        # Init central pillar    
+        pillars[self.grid.width//2][self.grid.height//2].height=self.max_pillar_height
+        return(pillars)
 
-        self.pillars[width//2][height//2].height=self.max_pillar_height
-
-        '''Initialize gamers'''
+    def init_gamerAgents(self):
+        '''Initialize gamers and team initiave_queues'''
+        grid_length=self.grid.width*self.grid.height
         for i in range(self.num_gamers_per_team*2):
-            unique_id=i+grid_length
+            unique_id=i+grid_length # each pillar already has a unique id, so we must give different unique ids to the gamer agents.
             
             team=self.teams[i%2] # un agent est ajouté à chaque équipe tour à tour.
-            initiative=i
 
-            agent = GamerAgent(unique_id, self,team,initiative=initiative)
-            self.gamer_list.append(agent)
+            agent = GamerAgent(unique_id, self,team)
+            team.initiative_queue.append(agent)
             self.schedule.add(agent)
 
             # Add the GamerAgent to a random unoccupied grid cell
@@ -407,18 +442,24 @@ class GameModel(mesa.Model):
                 x = self.random.randrange(self.grid.width)
                 y = self.random.randrange(self.grid.height)
             self.grid.place_agent(agent, (x, y))
-        
-        self.datacollector = mesa.DataCollector(
-            model_reporters={},
-            agent_reporters={}
-        )
 
     def update_initiatives(self):
-        for agent in self.gamer_list:
-            self.schedule.remove(agent)
-        
+        '''
+        Firstly remove all agents from the scheduler.
+        Then add them back in the order the initiative queue dictates.
+        So that way, the first agent in each team's initiative queue will act first in turn,
+        then the second, then the third...
+        '''
+        for team in self.teams:
+            for agent in team.initiative_queue:
+                self.schedule.remove(agent)
+        for i in range(self.num_gamers_per_team):
+            for team in self.teams: # un agent est ajouté à chaque équipe tour à tour.
+                agent=team.initiative_queue[i]
+                self.schedule.add(agent)
     
     def step(self):
         """Advance the model by one step."""
         self.datacollector.collect(self)
+        self.update_initiatives()
         self.schedule.step()
