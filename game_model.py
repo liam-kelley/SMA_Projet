@@ -77,13 +77,16 @@ class Team:
         self.discard.append(card)
         self.hand.remove(card)
 
-    def clear_agent_messages_from_pile(self, agent_id):
-        messages_to_remove=[]
-        for message in self.message_pile:
-            if message.sender_id == agent_id :
-                messages_to_remove.append(message)
-        for message in messages_to_remove:
-            self.message_pile.remove(message)
+    def clear_messages_from_pile(self, agent_id=None):
+        if agent_id!=None:
+            messages_to_remove=[]
+            for message in self.message_pile:
+                if message.sender_id == agent_id :
+                    messages_to_remove.append(message)
+            for message in messages_to_remove:
+                self.message_pile.remove(message)
+        else:
+            self.message_pile=[]
     
     def move_agent_to_first_initiative(self,agent):
         self.initiative_queue.remove(agent)
@@ -232,6 +235,10 @@ class GamerAgent(mesa.Agent):
             print(card, end=" , ")
         print("")
 
+    def clear_own_previous_messages(self):
+        '''To not read own messages when reading messages.'''
+        self.team.clear_messages_from_pile(self.unique_id)
+
     def check_win_condition(self):
         self.update_height()
         if self.height==self.model.max_pillar_height:
@@ -348,7 +355,8 @@ class GamerAgent(mesa.Agent):
     def step(self):
         self.update_height()
         self.update_initiative() #initiative has no practical purpose, but it could be used by an AI as additionnal info idk.
-        
+        self.clear_own_previous_messages()
+
         if len(self.team.hand) ==0 : self.team.draw_new_hand()
 
         self.print_current_status()
