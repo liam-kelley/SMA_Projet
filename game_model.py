@@ -337,12 +337,9 @@ class GamerAgent(mesa.Agent):
                 chosen_card = Card.MOVE
                 cell = self.random.choice(same_level_cells)
                 self.move_action(cell,raise_errors=True)
-            elif Card.MOVE in self.team.hand : # Then try moving anywhere (down).
-                chosen_card = Card.MOVE
-                self.random_move()
-            elif Card.BUILD_PILLAR in self.team.hand : # Then try building anywhere (blocking yourself).
-                chosen_card = Card.BUILD_PILLAR
-                self.random_build_pillar()
+            else: # Then instead of moving down, or building anywhere that would block the agent, choose to use card as an initiative_setter.
+                chosen_card = self.random.choice(self.team.hand)
+                self.use_card_as_initiative_setter()
         except Exception as e:
             print("EXCEPTION! ", e)
         
@@ -397,7 +394,7 @@ class GameModel(mesa.Model):
 
         self.num_gamers_per_team = num_gamers_per_team
         self.max_pillar_height=max_pillar_height
-        self.teams=self.init_teams(AI=[AI.RANDOM,AI.REACTIVE])
+        self.teams=self.init_teams(AIs=[AI.RANDOM,AI.REACTIVE])
         self.pillars=self.init_pillars()
         self.init_gamerAgents()
         
@@ -406,10 +403,10 @@ class GameModel(mesa.Model):
             agent_reporters={}
         )
 
-    def init_teams(self,AI=[AI.RANDOM,AI.REACTIVE]):
+    def init_teams(self,AIs=[AI.RANDOM,AI.REACTIVE]):
         '''Initialize Teams, team decks, and team hands.'''
-        teams=[Team(Color.RED , hand_size=self.num_gamers_per_team, ai=AI[0]),
-               Team(Color.BLUE, hand_size=self.num_gamers_per_team, ai=AI[1])]
+        teams=[Team(Color.RED , hand_size=self.num_gamers_per_team, ai=AIs[0]),
+               Team(Color.BLUE, hand_size=self.num_gamers_per_team, ai=AIs[1])]
         for team in teams:
             #Initialize team decks
             for _ in range(team.hand_size):
