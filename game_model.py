@@ -236,8 +236,16 @@ class GamerAgent(mesa.Agent):
         print("")
 
     def clear_own_previous_messages(self):
-        '''To not read own messages when reading messages.'''
+        '''To not read own messages before reading messages.'''
         self.team.clear_messages_from_pile(self.unique_id)
+
+    def ask_for_card(self,desired_card,importance=0):
+        message=Message(sender_id=self.unique_id, desire_card=desired_card, importance=importance)
+        self.team.message_pile.append(message)
+
+    def ask_for_first_initiative(self,importance=0):
+        message=Message(sender_id=self.unique_id, desire_first_initiative=True, importance=importance)
+        self.team.message_pile.append(message)
 
     def check_win_condition(self):
         self.update_height()
