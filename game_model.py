@@ -46,13 +46,15 @@ class Team:
     The Team class manages the decks which are common to all agents of a given team.
     The team class currently has no information on which agents are on which team.
     """
-    def __init__(self,color=Color.RED,hand_size=3,ai=AI.RANDOM):
+    def __init__(self,color=Color.RED,hand_size=3,ai="RANDOM", player=False):
         self.color=color
         self.hand_size=hand_size
         self.deck=[] #list of cards
         self.hand=[] #list of cards
         self.discard=[] #list of cards
-        self.ai=ai #can be : [AI.RANDOM, AI.REACTIVE]
+        if ai == "RANDOM" : self.ai = AI.RANDOM
+        if ai == "REACTIVE" : self.ai = AI.REACTIVE
+        self.player = player
         self.message_pile=[] #pile of Messages
         self.initiative_queue=[] # Queue of agents
     
@@ -304,6 +306,11 @@ class GamerAgent(mesa.Agent):
         elif chosen_card==Card.BUILD_PILLAR:
             self.random_build_pillar()
         return(chosen_card)
+    
+    def player(self):
+        nb_build = self.team.hand.count(Card.BUILD_PILLAR)
+        nb_move = self.team.hand.count(Card.MOVE)
+        print("There are {} move cards and {} build cards for you to choose".format(nb_move, nb_build))
 
     def reactive_AI(self):
         '''
@@ -370,7 +377,8 @@ class GamerAgent(mesa.Agent):
         self.print_current_status()
 
         chosen_card=None
-        if self.team.ai==AI.RANDOM: chosen_card=self.random_AI()        
+        if self.team.player == True : chosen_card=self.player()
+        elif self.team.ai==AI.RANDOM: chosen_card=self.random_AI()        
         elif self.team.ai==AI.REACTIVE: chosen_card=self.reactive_AI()
 
         self.team.discard_card(chosen_card)
@@ -403,14 +411,16 @@ class GameModel(mesa.Model):
     A pillar in a cell will generally be self.grid.grid[x][y][0], but you can directly access the pillar info using self.pillars[x][y].
     """
 
-    def __init__(self, num_gamers_per_team, width, height, max_pillar_height=7):
+    def __init__(self, num_gamers_per_team, width, height, player, AI1_behaviour, AI2_behaviour, max_pillar_height=7):
         self.grid = mesa.space.MultiGrid(width, height, False)
         self.schedule = mesa.time.BaseScheduler(self) # Sequential scheduler.
         self.running = True
-
+        self.player = player
+        self.AI1_behaviour = AI1_behaviour
+        self.AI2_behaviour = AI2_behaviour
         self.num_gamers_per_team = num_gamers_per_team
         self.max_pillar_height=max_pillar_height
-        self.teams=self.init_teams(AIs=[AI.RANDOM,AI.REACTIVE])
+        self.teams=self.init_teams(AIs=[AI1_behaviour, AI2_behaviour], player=player)
         self.pillars=self.init_pillars()
         self.init_gamerAgents()
         
@@ -419,9 +429,13 @@ class GameModel(mesa.Model):
             agent_reporters={}
         )
 
-    def init_teams(self,AIs=[AI.RANDOM,AI.REACTIVE]):
+    def init_teams(self, player, AIs=["RANDOM", "REACTIVE"]):
         '''Initialize Teams, team decks, and team hands.'''
-        teams=[Team(Color.RED , hand_size=self.num_gamers_per_team, ai=AIs[0]),
+        if player :
+            teams=[Team(Color.RED , hand_size=self.num_gamers_per_team, ai=AIs[0]),
+                Team(Color.BLUE, hand_size=self.num_gamers_per_team, ai=None, player = True)]
+        else :
+            teams=[Team(Color.RED , hand_size=self.num_gamers_per_team, ai=AIs[0]),
                Team(Color.BLUE, hand_size=self.num_gamers_per_team, ai=AIs[1])]
         for team in teams:
             #Initialize team decks
