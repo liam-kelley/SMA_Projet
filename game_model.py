@@ -311,7 +311,7 @@ class GamerAgent(mesa.Agent):
         '''
         Human player.
         Chooses an action between move and build, as well as the intended cell.
-        If no card can be played, set initiative to 0
+        If no card can be played, set initiative to 0.
         '''
         nb_build = self.team.hand.count(Card.BUILD_PILLAR)
         nb_move = self.team.hand.count(Card.MOVE)
