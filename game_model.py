@@ -308,13 +308,85 @@ class GamerAgent(mesa.Agent):
         return(chosen_card)
     
     def player(self):
+        '''
+        Human player.
+        Chooses an action between move and build, as well as the intended cell.
+        If no card can be played, set initiative to 0
+        '''
         nb_build = self.team.hand.count(Card.BUILD_PILLAR)
         nb_move = self.team.hand.count(Card.MOVE)
-        print("There are {} move cards and {} build cards for you to choose".format(nb_move, nb_build))
+        
+        blocked = True
+        
+        neighborhood_cells = self.model.grid.get_neighborhood(self.pos,moore=False, include_center=False)
+        for cell in neighborhood_cells:
+            if ((Card.BUILD_PILLAR in self.team.hand and self.build_pillar_action(cell, test=True)) or 
+                    (Card.MOVE in self.team.hand and self.move_action(cell, test=True))):
+                blocked = False
+        
+        if blocked == False:
+        # get the command from the player
+            while True:
+                    
+                print("There are {} move cards and {} build cards left in your hand".format(nb_move, nb_build))
+                print("Your current pawn is on column", self.pos[0]+1, "and line", self.model.grid.height - self.pos[1],".")
+                # get the command from user
+                try:
+                    action, direction = str(input("Enter your action with format (move/build) + (up/down/left/right), or (no action) to play first in the next round: ")).split()
+                except :
+                    print("Invalid command, enter a chain of characters.\n")
+                    continue
+                else:
+                    # command kill loop to exit the program
+                    if (action.lower() == "kill" and direction.lower() == "loop") : exit()
+                    # choose to set initiative to zero
+                    if (action.lower() == "no" and direction.lower() == "action") : 
+                        self.use_card_as_initiative_setter()
+                        while True:
+                            try:
+                                print("There are {} move cards and {} build cards left in your hand".format(nb_move, nb_build))
+                                to_discard = str(input("Choose which action to discard (move or build) :"))
+                            except :
+                                print("Invalid command, enter a chain of characters.\n")
+                                continue
+                            else:
+                                if to_discard.lower() == "move" and nb_move > 0:
+                                    return Card.MOVE
+                                elif to_discard.lower() == "build" and nb_build > 0:
+                                    return Card.BUILD_PILLAR
+                                print("Invalid command, you must choose between available cards.\n")
+                        
+                    # if invalid set of commands
+                    if(not action.lower() in ["move", "build"] or not direction.lower() in ["up", "down", "left", "right"]):
+                        print("Invalid command, enter command with the given format.\n")
+                        continue
+                    if direction.lower() == "up": intended_cell = (self.pos[0], self.pos[1]+1)
+                    elif direction.lower() == "down": intended_cell = (self.pos[0], self.pos[1]-1)
+                    elif direction.lower() == "left": intended_cell = (self.pos[0]-1, self.pos[1])
+                    else : intended_cell = (self.pos[0]+1, self.pos[1])
+                    
+                    # if given cell out of bounds
+                    if self.model.grid.out_of_bounds(intended_cell) :
+                        print("Invalid command, cell out of bounds.\n")
+                        continue
+                    
+                    # check that the action is a possible card in the team's hand and that the action is doable
+                    if action.lower() == "build" and Card.BUILD_PILLAR in self.team.hand and self.build_pillar_action(intended_cell, test=True) :
+                        self.build_pillar_action(intended_cell, test=False)
+                        return Card.BUILD_PILLAR
+                    elif action.lower() == "move" and Card.MOVE in self.team.hand and self.move_action(intended_cell, test=True) :
+                        self.move_action(intended_cell, test=False)
+                        return Card.MOVE
+                    print("Invalid command, you can't do this action !\n")
+                    
+        print("You pawn can't do anything for this turn and must play first in the next round.\n")
+        self.use_card_as_initiative_setter()
+        return(self.random.choice(self.team.hand))
+        
+                
 
     def reactive_AI(self):
         '''
-        Purely Reactive AI. Previously known as AI.GOTTA_STAY_HIGH.
         Always tries to get higher, or builds to get higher, and avoids moving lower.
         Doesn't necessarily try to get to the middle of the board.
         '''
