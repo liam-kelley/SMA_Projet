@@ -311,6 +311,7 @@ class GamerAgent(mesa.Agent):
     def player(self):
         '''
         Human player.
+        Overrides second blue AI if player option is active.
         Chooses an action between move and build, as well as the intended cell.
         If no card can be played, set initiative to 0.
         '''
