@@ -13,6 +13,29 @@ def clamp(x, minimum, maximum ):
 def diff(a,b):
     return(abs(a-b))
 
+def tuple_dist(tuple_a,tuple_b):
+    return(diff(tuple_a[0],tuple_b[0]) + diff(tuple_a[1],tuple_b[1]))
+
+def closest_cells_to_target(cell_list, target_cell):
+    '''
+    from list of tuples and target, returns list closest tuples to target tuple.
+    Warning! pops first element of original cell_list.
+    '''
+    try:
+        assert(cell_list)
+    except(AssertionError):
+        return None
+    closest_cells=[cell_list.pop(0)]
+    min_dist= tuple_dist(closest_cells[0],target_cell)
+    for cell in cell_list:
+        dist= tuple_dist(cell,target_cell)
+        if dist < min_dist :
+            closest_cells = [cell]
+            min_dist = dist
+        elif dist == min_dist:
+            closest_cells.append(cell)
+    return(closest_cells)
+
 class Color(Enum):
     RED = enum.auto(),
     BLUE = enum.auto()
@@ -45,7 +68,8 @@ class Message:
 class Team:
     """
     The Team class manages the decks which are common to all agents of a given team.
-    The team class currently has no information on which agents are on which team.
+    The team class also manages team messages and team initiative.
+    The agents belonging to a team are all represented in its initiative queue.
     """
     def __init__(self,color=Color.RED,hand_size=3,ai="RANDOM", player=False):
         self.color=color
@@ -99,7 +123,7 @@ class Team:
 
 class PillarAgent(mesa.Agent):
     """
-    A pillar agent.
+    A pillar "agent".
     Has a height ranging from 0 to self.model.max_pillar_height -1 except the center pillar which has a height of max_pillar_height.
     A pillar must be an agent to be visualized in mesa.
     Pillars aren't scheduled in the scheduler.
@@ -323,6 +347,7 @@ class GamerAgent(mesa.Agent):
     def player(self):
         '''
         Human player.
+        Overrides second blue AI if player option is active.
         Chooses an action between move and build, as well as the intended cell.
         If no card can be played, set initiative to 0.
         '''
@@ -395,7 +420,7 @@ class GamerAgent(mesa.Agent):
         print("You pawn can't do anything for this turn and must play first in the next round.\n")
         self.use_card_as_initiative_setter()
         return(self.random.choice(self.team.hand))
-        
+
     def count_height(self, t="default"):
         if t == "foes" : team = self.get_foes()
         else : team = self.get_allies()
@@ -496,7 +521,6 @@ class GamerAgent(mesa.Agent):
             
         return(chosen_card)       
                 
-        
     def reactive_AI(self):
         '''
         Always tries to get higher, or builds to get higher, and avoids moving lower.
@@ -505,6 +529,7 @@ class GamerAgent(mesa.Agent):
         chosen_card=None
 
         neighborhood_cells = self.model.grid.get_neighborhood(self.pos,moore=False, include_center=False)
+        center_cell = (self.model.grid.width//2, self.model.grid.height//2)
 
         advantageous_cells=[]
         for cell in neighborhood_cells:
@@ -529,19 +554,19 @@ class GamerAgent(mesa.Agent):
         try:
             if advantageous_cells and Card.MOVE in self.team.hand : # First check if there is any pillar you can move up upon.
                 chosen_card = Card.MOVE
-                cell = self.random.choice(advantageous_cells)
+                cell = self.random.choice(closest_cells_to_target(advantageous_cells, center_cell))
                 self.move_action(cell,raise_errors=True)
             elif upgradable_cells and Card.BUILD_PILLAR in self.team.hand : # Then check if you can make a pillar to move up upon.
                 chosen_card = Card.BUILD_PILLAR
-                cell = self.random.choice(upgradable_cells)
+                cell = self.random.choice(closest_cells_to_target(upgradable_cells, center_cell))
                 self.build_pillar_action(cell,raise_errors=True)
             elif lower_cells and Card.BUILD_PILLAR in self.team.hand : # Then check if there are any pillars to build which won't block you.
                 chosen_card = Card.BUILD_PILLAR
-                cell = self.random.choice(lower_cells)
+                cell = self.random.choice(closest_cells_to_target(lower_cells, center_cell))
                 self.build_pillar_action(cell,raise_errors=True)
             elif same_level_cells and Card.MOVE in self.team.hand : # Then check if you can move horizontally to another pillar.
                 chosen_card = Card.MOVE
-                cell = self.random.choice(same_level_cells)
+                cell = self.random.choice(closest_cells_to_target(same_level_cells, center_cell))
                 self.move_action(cell,raise_errors=True)
             else: # Then instead of moving down, or building anywhere that would block the agent, choose to use card as an initiative_setter.
                 chosen_card = self.random.choice(self.team.hand)

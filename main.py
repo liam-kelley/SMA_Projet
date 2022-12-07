@@ -21,12 +21,12 @@ def run_single_server(grid_size):
     server = mesa.visualization.ModularServer(
         GameModel, [grid], "Game Model",
         {"num_gamers_per_team": UserSettableParameter('slider', "Number of mates per team", 2, 1, 5, 1),
-         "max_pillar_height": UserSettableParameter('slider', "Height of the central pillar", 7, 4, 10, 1),
+         "max_pillar_height": UserSettableParameter('slider', "Height of the central pillar", 5, 4, 10, 1),
          "width": grid_size[0],
          "height": grid_size[0],
          "AI1_behaviour" : UserSettableParameter('choice', 'Red AI behaviour', value='RANDOM',
                                           choices=["RANDOM", "REACTIVE", "UTILITY"]),
-         "AI2_behaviour" : UserSettableParameter('choice', 'Blue AI behaviour', value='RANDOM',
+         "AI2_behaviour" : UserSettableParameter('choice', 'Blue AI behaviour', value='REACTIVE',
                                           choices=['RANDOM', 'REACTIVE', "UTILITY"]),
          "player" : UserSettableParameter('checkbox', 'Human player ? (BLUE)', value=False),
          } # Model parameters
@@ -35,5 +35,5 @@ def run_single_server(grid_size):
     server.launch()
 
 if __name__ == "__main__":
-    # run_single_server(grid_size = [7,7], num_gamers_per_team=3, max_pillar_height=7)
+    # run_single_server(grid_size = [7,7])
     run_single_server(grid_size = [5,5])
