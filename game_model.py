@@ -43,6 +43,7 @@ class Color(Enum):
 class AI(Enum):
     RANDOM = enum.auto()
     REACTIVE = enum.auto()
+    UTILITY = enum.auto()
 
 class Card(Enum):
     MOVE = enum.auto(),
@@ -78,6 +79,7 @@ class Team:
         self.discard=[] #list of cards
         if ai == "RANDOM" : self.ai = AI.RANDOM
         if ai == "REACTIVE" : self.ai = AI.REACTIVE
+        if ai == "UTILITY" : self.ai = AI.UTILITY
         self.player = player
         self.message_pile=[] #pile of Messages
         self.initiative_queue=[] # Queue of agents
@@ -201,6 +203,14 @@ class GamerAgent(mesa.Agent):
         This isn't currently used.
         '''
         return(self.initiative < other.initiative)
+    
+    def get_allies(self):
+        allies = [agent for agent in self.model.schedule.agents if agent.team == self.team]
+        return (allies)
+    
+    def get_foes(self):
+        foes = [agent for agent in self.model.schedule.agents if agent.team != self.team]
+        return (foes)
 
     def update_height(self):
         '''Updates current height from the pillar the agent is standing on.'''
@@ -248,6 +258,9 @@ class GamerAgent(mesa.Agent):
             if raise_errors: raise(Exception("Pillar is too tall to build up."))
         if raise_errors: raise(Exception("There is an agent in this cell."))
         return(False)
+    
+    def debuild_pillar(self, cell):
+        self.model.pillars[cell[0]][cell[1]].height-=1
 
     def use_card_as_initiative_setter(self):
         self.team.move_agent_to_first_initiative(self)
@@ -407,7 +420,107 @@ class GamerAgent(mesa.Agent):
         print("You pawn can't do anything for this turn and must play first in the next round.\n")
         self.use_card_as_initiative_setter()
         return(self.random.choice(self.team.hand))
-                      
+
+    def count_height(self, t="default"):
+        if t == "foes" : team = self.get_foes()
+        else : team = self.get_allies()
+        return (sum([agent.height for agent in team]))
+    
+    def count_advantageaous_cells(self, t="default"):
+        advantageous_cells=[]
+        if t == "foes" : team = self.get_foes()
+        else : team = self.get_allies()
+        for agent in team:
+            neighborhood_cells = self.model.grid.get_neighborhood(agent.pos,moore=False, include_center=False)
+            for cell in neighborhood_cells:
+                if agent.move_action(cell, test=True) and self.model.pillars[cell[0]][cell[1]].height - agent.height == 1 and cell not in advantageous_cells: 
+                    advantageous_cells.append(cell)
+        return len(advantageous_cells)
+    
+    def count_upgradable_cells(self, t="default"):
+        upgradable_cells=[]
+        if t == "foes" : team = self.get_foes()
+        else : team = self.get_allies()
+        for agent in team:
+            neighborhood_cells = self.model.grid.get_neighborhood(agent.pos,moore=False, include_center=False)
+            for cell in neighborhood_cells:
+                if agent.build_pillar_action(cell, test=True) and self.model.pillars[cell[0]][cell[1]].height - agent.height == 0 and cell not in upgradable_cells: 
+                    upgradable_cells.append(cell)
+        return len(upgradable_cells)    
+    
+    def distance_center(self):
+        return (abs(self.pos[0] - self.model.grid.width//2) + abs(self.pos[1] - self.model.grid.height//2))
+    
+    def count_blocking_cells(self, t="default"):
+        blocking_cells=[]
+        if t == "foes" : team = self.get_foes()
+        else : team = self.get_allies()
+        for agent in team:
+            neighborhood_cells = self.model.grid.get_neighborhood(agent.pos,moore=False, include_center=False)
+            for cell in neighborhood_cells:
+                if not agent.move_action(cell, test=True) and cell not in blocking_cells: 
+                    blocking_cells.append(cell)
+        return len(blocking_cells)        
+    
+    def utility(self, w_height_A=3, w_height_F=1, w_adv_A=3, w_adv_F=1, w_upgrade_A=3, w_upgrade_F=1,
+                    w_center_A=1, w_block_A=1, w_block_F=1):
+        return (w_height_A * self.count_height() - w_height_F * self.count_height(t = "foes")
+                + w_adv_A * self.count_advantageaous_cells() - w_adv_F * self.count_advantageaous_cells(t = "foes")
+                + w_upgrade_A * self.count_upgradable_cells() - w_upgrade_F * self.count_upgradable_cells(t = "foes")
+                - w_center_A * self.distance_center()
+                - w_block_A * self.count_blocking_cells() + w_block_F * self.count_blocking_cells(t = "foes")
+                )
+    
+    def utility_AI(self):
+        '''
+        Reacts according to a utility function, designed to maximise allies' height, the number of cells that
+        enable to move up, the number of cells that can be upgraded, minimise the number of unreachable cells and
+        the distance to the center (vice-versa with these features for the opponents)
+        '''
+        
+        neighborhood_cells = self.model.grid.get_neighborhood(self.pos,moore=False, include_center=False)
+        best_utility = float('-inf')
+        best_cell = neighborhood_cells[0]
+        best_action = "move"
+        
+        for cell in neighborhood_cells:
+            cell_tmp = (self.pos[0], self.pos[1])
+            print("CURR CELL:", cell_tmp)
+            print("NEIG CELL:", cell)
+            if self.move_action(cell, test=True):
+                self.move_action(cell, raise_errors=True)
+                utility = self.utility()
+                if utility > best_utility : 
+                    best_utility = utility
+                    best_cell = cell
+                    best_action = "move"
+                print("JE SUIS EN ", cell , "ET JAI UNE HAUTEUR", self.height)
+                print("CA BOUGE EN :", cell_tmp)
+                self.move_action(cell_tmp, raise_errors=True)
+            if self.build_pillar_action(cell, test=True):
+                self.build_pillar_action(cell, raise_errors=True)
+                utility = self.utility()
+                if utility > best_utility : 
+                    best_utility = utility
+                    best_cell = cell
+                    best_action = "build"
+                self.debuild_pillar(cell)
+                
+        if best_utility < -10:
+            chosen_card = self.random.choice(self.team.hand)
+            self.use_card_as_initiative_setter()
+        elif best_action == "move" and Card.MOVE in self.team.hand:
+            chosen_card = Card.MOVE
+            self.move_action(best_cell, raise_errors=True)
+        elif best_action =="build" and Card.BUILD_PILLAR in self.team.hand:
+            chosen_card = Card.BUILD_PILLAR
+            self.build_pillar_action(best_cell, raise_errors=True)
+        else :
+            chosen_card = self.random.choice(self.team.hand)
+            self.use_card_as_initiative_setter() 
+            
+        return(chosen_card)       
+                
     def reactive_AI(self):
         '''
         Always tries to get higher, or builds to get higher, and avoids moving lower.
@@ -476,6 +589,7 @@ class GamerAgent(mesa.Agent):
         if self.team.player == True : chosen_card=self.player()
         elif self.team.ai==AI.RANDOM: chosen_card=self.random_AI()        
         elif self.team.ai==AI.REACTIVE: chosen_card=self.reactive_AI()
+        elif self.team.ai==AI.UTILITY: chosen_card=self.utility_AI()
 
         self.team.discard_card(chosen_card)
         self.check_win_condition()
