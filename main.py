@@ -26,7 +26,7 @@ def run_single_server(grid_size):
          "height": grid_size[0],
          "AI1_behaviour" : UserSettableParameter('choice', 'Red AI behaviour', value='RANDOM',
                                           choices=["RANDOM", "REACTIVE"]),
-         "AI2_behaviour" : UserSettableParameter('choice', 'Blue AI behaviour', value='RANDOM',
+         "AI2_behaviour" : UserSettableParameter('choice', 'Blue AI behaviour', value='REACTIVE',
                                           choices=['RANDOM', 'REACTIVE']),
          "player" : UserSettableParameter('checkbox', 'Human player ? (BLUE)', value=False),
          } # Model parameters
