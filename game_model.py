@@ -46,13 +46,15 @@ class Team:
     The Team class manages the decks which are common to all agents of a given team.
     The team class currently has no information on which agents are on which team.
     """
-    def __init__(self,color=Color.RED,hand_size=3,ai=AI.RANDOM):
+    def __init__(self,color=Color.RED,hand_size=3,ai="RANDOM", player=False):
         self.color=color
         self.hand_size=hand_size
         self.deck=[] #list of cards
         self.hand=[] #list of cards
         self.discard=[] #list of cards
-        self.ai=ai #can be : [AI.RANDOM, AI.REACTIVE]
+        if ai == "RANDOM" : self.ai = AI.RANDOM
+        if ai == "REACTIVE" : self.ai = AI.REACTIVE
+        self.player = player
         self.message_pile=[] #pile of Messages
         self.initiative_queue=[] # Queue of agents
     
@@ -304,10 +306,87 @@ class GamerAgent(mesa.Agent):
         elif chosen_card==Card.BUILD_PILLAR:
             self.random_build_pillar()
         return(chosen_card)
+    
+    def player(self):
+        '''
+        Human player.
+        Chooses an action between move and build, as well as the intended cell.
+        If no card can be played, set initiative to 0.
+        '''
+        nb_build = self.team.hand.count(Card.BUILD_PILLAR)
+        nb_move = self.team.hand.count(Card.MOVE)
+        
+        blocked = True
+        
+        neighborhood_cells = self.model.grid.get_neighborhood(self.pos,moore=False, include_center=False)
+        for cell in neighborhood_cells:
+            if ((Card.BUILD_PILLAR in self.team.hand and self.build_pillar_action(cell, test=True)) or 
+                    (Card.MOVE in self.team.hand and self.move_action(cell, test=True))):
+                blocked = False
+        
+        if blocked == False:
+        # get the command from the player
+            while True:
+                    
+                print("There are {} move cards and {} build cards left in your hand".format(nb_move, nb_build))
+                print("Your current pawn is on column", self.pos[0]+1, "and line", self.model.grid.height - self.pos[1],".")
+                # get the command from user
+                try:
+                    action, direction = str(input("Enter your action with format (move/build) + (up/down/left/right), or (no action) to play first in the next round: ")).split()
+                except :
+                    print("Invalid command, enter a chain of characters.\n")
+                    continue
+                else:
+                    # command kill loop to exit the program
+                    if (action.lower() == "kill" and direction.lower() == "loop") : exit()
+                    # choose to set initiative to zero
+                    if (action.lower() == "no" and direction.lower() == "action") : 
+                        self.use_card_as_initiative_setter()
+                        while True:
+                            try:
+                                print("There are {} move cards and {} build cards left in your hand".format(nb_move, nb_build))
+                                to_discard = str(input("Choose which action to discard (move or build) :"))
+                            except :
+                                print("Invalid command, enter a chain of characters.\n")
+                                continue
+                            else:
+                                if to_discard.lower() == "move" and nb_move > 0:
+                                    return Card.MOVE
+                                elif to_discard.lower() == "build" and nb_build > 0:
+                                    return Card.BUILD_PILLAR
+                                print("Invalid command, you must choose between available cards.\n")
+                        
+                    # if invalid set of commands
+                    if(not action.lower() in ["move", "build"] or not direction.lower() in ["up", "down", "left", "right"]):
+                        print("Invalid command, enter command with the given format.\n")
+                        continue
+                    if direction.lower() == "up": intended_cell = (self.pos[0], self.pos[1]+1)
+                    elif direction.lower() == "down": intended_cell = (self.pos[0], self.pos[1]-1)
+                    elif direction.lower() == "left": intended_cell = (self.pos[0]-1, self.pos[1])
+                    else : intended_cell = (self.pos[0]+1, self.pos[1])
+                    
+                    # if given cell out of bounds
+                    if self.model.grid.out_of_bounds(intended_cell) :
+                        print("Invalid command, cell out of bounds.\n")
+                        continue
+                    
+                    # check that the action is a possible card in the team's hand and that the action is doable
+                    if action.lower() == "build" and Card.BUILD_PILLAR in self.team.hand and self.build_pillar_action(intended_cell, test=True) :
+                        self.build_pillar_action(intended_cell, test=False)
+                        return Card.BUILD_PILLAR
+                    elif action.lower() == "move" and Card.MOVE in self.team.hand and self.move_action(intended_cell, test=True) :
+                        self.move_action(intended_cell, test=False)
+                        return Card.MOVE
+                    print("Invalid command, you can't do this action !\n")
+                    
+        print("You pawn can't do anything for this turn and must play first in the next round.\n")
+        self.use_card_as_initiative_setter()
+        return(self.random.choice(self.team.hand))
+        
+                
 
     def reactive_AI(self):
         '''
-        Purely Reactive AI. Previously known as AI.GOTTA_STAY_HIGH.
         Always tries to get higher, or builds to get higher, and avoids moving lower.
         Doesn't necessarily try to get to the middle of the board.
         '''
@@ -370,7 +449,8 @@ class GamerAgent(mesa.Agent):
         self.print_current_status()
 
         chosen_card=None
-        if self.team.ai==AI.RANDOM: chosen_card=self.random_AI()        
+        if self.team.player == True : chosen_card=self.player()
+        elif self.team.ai==AI.RANDOM: chosen_card=self.random_AI()        
         elif self.team.ai==AI.REACTIVE: chosen_card=self.reactive_AI()
 
         self.team.discard_card(chosen_card)
@@ -403,14 +483,16 @@ class GameModel(mesa.Model):
     A pillar in a cell will generally be self.grid.grid[x][y][0], but you can directly access the pillar info using self.pillars[x][y].
     """
 
-    def __init__(self, num_gamers_per_team, width, height, max_pillar_height=7):
+    def __init__(self, num_gamers_per_team, width, height, player, AI1_behaviour, AI2_behaviour, max_pillar_height=7):
         self.grid = mesa.space.MultiGrid(width, height, False)
         self.schedule = mesa.time.BaseScheduler(self) # Sequential scheduler.
         self.running = True
-
+        self.player = player
+        self.AI1_behaviour = AI1_behaviour
+        self.AI2_behaviour = AI2_behaviour
         self.num_gamers_per_team = num_gamers_per_team
         self.max_pillar_height=max_pillar_height
-        self.teams=self.init_teams(AIs=[AI.RANDOM,AI.REACTIVE])
+        self.teams=self.init_teams(AIs=[AI1_behaviour, AI2_behaviour], player=player)
         self.pillars=self.init_pillars()
         self.init_gamerAgents()
         
@@ -419,9 +501,13 @@ class GameModel(mesa.Model):
             agent_reporters={}
         )
 
-    def init_teams(self,AIs=[AI.RANDOM,AI.REACTIVE]):
+    def init_teams(self, player, AIs=["RANDOM", "REACTIVE"]):
         '''Initialize Teams, team decks, and team hands.'''
-        teams=[Team(Color.RED , hand_size=self.num_gamers_per_team, ai=AIs[0]),
+        if player :
+            teams=[Team(Color.RED , hand_size=self.num_gamers_per_team, ai=AIs[0]),
+                Team(Color.BLUE, hand_size=self.num_gamers_per_team, ai=None, player = True)]
+        else :
+            teams=[Team(Color.RED , hand_size=self.num_gamers_per_team, ai=AIs[0]),
                Team(Color.BLUE, hand_size=self.num_gamers_per_team, ai=AIs[1])]
         for team in teams:
             #Initialize team decks
