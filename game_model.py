@@ -44,7 +44,8 @@ class Message:
 class Team:
     """
     The Team class manages the decks which are common to all agents of a given team.
-    The team class currently has no information on which agents are on which team.
+    The team class also manages team messages and team initiative.
+    The agents belonging to a team are all represented in its initiative queue.
     """
     def __init__(self,color=Color.RED,hand_size=3,ai=AI.RANDOM):
         self.color=color
@@ -95,7 +96,7 @@ class Team:
 
 class PillarAgent(mesa.Agent):
     """
-    A pillar agent.
+    A pillar "agent".
     Has a height ranging from 0 to self.model.max_pillar_height -1 except the center pillar which has a height of max_pillar_height.
     A pillar must be an agent to be visualized in mesa.
     Pillars aren't scheduled in the scheduler.
