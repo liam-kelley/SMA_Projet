@@ -141,7 +141,7 @@ Their height is converted to a corresponding lightness value for visualizing pur
 
 **GamerAgent** :
 This represents the main type of agent in the game, the one that is scheduled in the scheduler. Some basic methods are implemented for all AI's behaviours :
-- This < sign is overriden to comapre two GamerAgents based on their initiative;
+- This < sign is overriden to compare two GamerAgents based on their initiative;
 - The get_allies() method is used to access the members of an agent's team;
 - The get_foes() method is used to access the members of the agent's ennemy team;
 - The update_height() method (straightfoward);
@@ -155,7 +155,35 @@ This represents the main type of agent in the game, the one that is scheduled in
 - The ask_for_card(desired_card,importance=0) method sends a message to the pile with a desired card (not used eventually);
 - The ask_for_first_initiative(importance=0) method sends a message to the pile to ask for initiative (not used eventually);
 - The check_win_condition() method (straightfoward).
+
 Four specific behaviours are then implemented using their own methods, to determine which action to play for each agent at each turn.
 
 ## Different AI implemented:
 
+Here are presented the four behaviours implemented.
+
+**RANDOM AI** : This AI acts totally at random, randomly picking a card from the hand and selecting one of its the agent's nearby cells which it can the card onto. If no cell is available for the chosen card, it will discard it and use it to set its initiative to first for the next round.
+This AI usually gets stuck by itself, but sometimes reaches the central pillar, with a little bit of luck.
+
+**REACTIVE AI** : This AI follows this plan :
+- If there is a nearby cell which the agent can climb upon and a MOVE card is in the agent's team, the agent will choose this action;
+- Else if there is nearby cell of same height as the agent's that can be upgraded and a BUILD_PILLAR card is in the agent's team, the agent will choose it;
+- Else if there is a nearby cell of a height lower than the agent's that can be upgraded and a BUILD_PILLAR card is in the agent's team, the agent will choose it;
+- Else if there is a nearby cell of same height as the agent's that is reachable and a MOVE card is in the agent's team, the agent will choose this action;
+- Else the AI will choose a card at random from the hand and use it the agent's initiative to first for the next round.
+
+This AI usually performs well, always reaching the central pillar even if it has to build many unnecessary pillars to the maximum height. It very usually wins against the random behaviour.
+
+**UTILITY AI** : This AI chooses the action according to a utility function which it will maximise. To do so, it determines which actions are possible to do, it  realises them and calculates the utility score from this position. It then reverts back to the initial state and tests the following actions until everything has been tested. It eventually chooses the action that had the best utility score, and realises it if the corresponding card is available in the agent's team's hand. If the best score is too low or if the card is not available, it will discard a card at random to set its initiative to first for the next round.
+
+The utility function is based on the following criteria :
+- Maximise the heights of the allies, and minimise those of the ennemies;
+- Maximise the number of pillars which an ally can climb upon, and minimise this type of cells for the ennemies;
+- Maximise the number of pillars which are the same level as an ally agent, and minimse this type of cells for the ennemies;
+- Minimise the number of cells which an ally cannot access, and maximise this type of cell for the ennemies;
+- Minimise the ally distance to the central pillar.
+
+Every one of these criteria has its own weight in the utility function, so that it is a linear combination of all these criteria. Unfortunately, because of a lack of time, no batch has been run to test the best weights. As a result, the final behaviour is unsatisfying, unable to access the central pillar and usually ending up doing the same two movements for eternity, or having the agent get stuck by itself. Also the weights are probably not linear, for example we would like the "minimising distance to the center" have more and more impact as the agent climbs up and up.
+
+**PLAYER** : Finally, the behaviour can be controlled by a human player via a command line. One just needs to pass the desired action as (move/build) + (up/down/left/right), or (no action) if one wants to set initiative to first for the next round. The script should check if the desired action is doable and ask until a valid command is given.
+**IMPORTANT NOTE: BECAUSE OF THE WHILE TRUE LOOP, THE CTRL+C COMMAND DOESN'T WORK TO KILL THE SCRIPT, BUT ONE CAN DO IT BY ENTERING "KILL LOOP" WHILE ENTERING THE DESIRED ACTION**
