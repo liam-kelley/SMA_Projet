@@ -52,9 +52,18 @@ When a GamerAgent acts, they MAY want to become to become first initiative.
 Say steveAgent wants to become first initiative. Here's what happens
 
 Initial state:
-Team_Blue_Initiative_Pile = catherineAgent, liamAgent, steveAgent, florianAgent 
+Team_Blue_Initiative_Pile =
+- catherineAgent
+- liamAgent
+- steveAgent
+- florianAgent
+
 New state after steve becomes first initiative:
-Team_Blue_Initiative_Pile= steveAgent, catherineAgent, liamAgent, florianAgent
+Team_Blue_Initiative_Pile=
+- steveAgent
+- catherineAgent
+- liamAgent
+- florianAgent
 
 Steve moves first, the others before him move 1 back in the initiative pile.
 The remainder of the turn isn't influenced by this, but on the NEXT turn, steve will act first.
