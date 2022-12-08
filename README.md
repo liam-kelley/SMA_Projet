@@ -1,6 +1,6 @@
 # SMA_Projet
 
-Implementing the game of PILLARS as a Multi-Agent System, and implementing MANUAL (human-controlled), RANDOM, REACTIVE, and UTILITARIAN AI for the agents.
+Implementing the game of PILLARS as a Multi-Agent System, and implementing MANUAL (human-controlled), RANDOM, REACTIVE, and UTILITY AI for the agents.
 
 # The game of PILLARS
 
