@@ -125,10 +125,10 @@ The team class has the following methods:
 **PillarAgent** :
 Pillar "agent".
 Has a height ranging from 0 to self.model.max_pillar_height -1.
-The center pillar is an aexception, it has a height of max_pillar_height.
+The center pillar is an exception, it has a height of max_pillar_height.
 
 Pillars aren't scheduled in the scheduler because they aren't an agent in an SMA approach.
-(This class does inherit mes.Agent, but they aren't agents Tthey must inherit the mesa.Agent class to be visualized in mesa when we aren't changing the javascript visualization library, which we didn't do.)
+(This class does inherit mes.Agent, but they aren't agents They must inherit the mesa.Agent class to be visualized in mesa when we aren't changing the javascript visualization library, which we didn't do.)
 
 Their height is converted to a corresponding lightness value for visualizing purposes.
 
