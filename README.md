@@ -76,17 +76,24 @@ Acting first next turn will give him the most options to choose from. Also, if i
 
 ## A generic "Turn":
 
-TODO
+An agent's turn is divised as such :
+- Update the agent's height;
+- Update the agent's initiative;
+- Clear the agent's own messages; (useless in the end because the messaging function ended up being used for no AI behaviour);
+- Draw a new hand for the team if it is empty (the first agent to play in the round should be the one to do that because size_hand == num_agents)
+- Choose a card from the hand according to the agent's behaviour and discard it to use its action (or don't use it to play first in the next round);
+- Check if this action is a game-winning action.
+AI behaviours are described later in this file.
 
 ## Setup and running the model
 
 Clone the repository.
 
-Libraries needed: TODO
+Libraries needed: You should have mesa and numpy installed for the code to run properly.
 
-Possible model options: TODO
+Possible model options: Mesa's interface can be used to select different options on the board : the number of players in a team, the height of the central pillar, the behaviour used for any of the two AIs and if there is a human playing the game.
 
-How to change grid_size: TODO
+How to change grid_size: Because the size of the grid cannot be passed as a user settable argument to the game model we need to find another way. The size is thus initialised at the launch of the script after calling the main file, and it will only work if the argument is an odd number that is superior to 5. Passing no argument will initialise size_grid to 5.
 
 # Code Architechture
 
@@ -133,5 +140,22 @@ Pillars aren't scheduled in the scheduler because they aren't an agent in an SMA
 Their height is converted to a corresponding lightness value for visualizing purposes.
 
 **GamerAgent** :
+This represents the main type of agent in the game, the one that is scheduled in the scheduler. Some basic methods are implemented for all AI's behaviours :
+- This < sign is overriden to comapre two GamerAgents based on their initiative;
+- The get_allies() method is used to access the members of an agent's team;
+- The get_foes() method is used to access the members of the agent's ennemy team;
+- The update_height() method (straightfoward);
+- The update_initiative() method (straightfoward);
+- The move_action(cell, test, raise_errors) method tests is the target cell is accessible and gets the agent to that cell there if test==False;
+- The build_pillar_action(cell, test, raise_errors) method tests if the pillar in the target cell can be upgraded, and upgrades it of test==False;
+- The debuild_pillar(cell) method downgrades a pillar, and doesn't require a test because it is always used after upgrading the target pillar;
+- The use_card_as_initiative_setter() method calls the move_agent_to_first_initiative(agent) method from the Team class;
+- The print_current_status() method prints the team of the current agent, its id and its hand;
+- The clear_own_previous_messages() method calls the clear_messages_from_pile(agent_id) method from the Team class;
+- The ask_for_card(desired_card,importance=0) method sends a message to the pile with a desired card (not used eventually);
+- The ask_for_first_initiative(importance=0) method sends a message to the pile to ask for initiative (not used eventually);
+- The check_win_condition() method (straightfoward).
+Four specific behaviours are then implemented using their own methods, to determine which action to play for each agent at each turn.
 
 ## Different AI implemented:
+
