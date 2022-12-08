@@ -170,7 +170,7 @@ This AI usually gets stuck by itself, but sometimes reaches the central pillar, 
 - Else if there is nearby cell of same height as the agent's that can be upgraded and a BUILD_PILLAR card is in the agent's team, the agent will choose it;
 - Else if there is a nearby cell of a height lower than the agent's that can be upgraded and a BUILD_PILLAR card is in the agent's team, the agent will choose it;
 - Else if there is a nearby cell of same height as the agent's that is reachable and a MOVE card is in the agent's team, the agent will choose this action;
-- Else the AI will choose a card at random from the hand and use it the agent's initiative to first for the next round.
+- Else the AI will choose a card at random from the hand and use it to set the agent's initiative to first for the next round.
 
 This AI usually performs well, always reaching the central pillar even if it has to build many unnecessary pillars to the maximum height. It very usually wins against the random behaviour.
 
