@@ -69,6 +69,9 @@ Steve moves first, the others before him move 1 back in the initiative pile.
 The remainder of the turn isn't influenced by this, but on the NEXT turn, steve will act first.
 Just as long as florian doesn't want to act first too...
 
+Why would an agent want to play first? Maybe an agent acts last and DOESN'T have a certain card accessible.
+Acting first next turn will give him the most options to choose from.
+
 ## A generic "Turn":
 
 TODO
