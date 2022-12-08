@@ -96,9 +96,11 @@ The GamerAgents interact within the Model each step according to a specific init
 
 # Enums:
 
-**Color** : Corresponds to team colors. Can be RED or BLUE
+**Color** : Corresponds to team colors. Can be RED or BLUE.
+
 **AI** : Corresponds to what drives each team's agents. Can be RANDOM, REACTIVE, UTILITY.
-**Card** : These are the cards that can be in a team's hand, deck, or discard pile. Can be MOVE, or BUILD_PILLAR
+
+**Card** : These are the cards that can be in a team's hand, deck, or discard pile. Can be MOVE, or BUILD_PILLAR.
 
 # Classes:
 
