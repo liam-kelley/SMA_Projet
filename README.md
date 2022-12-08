@@ -2,7 +2,7 @@
 
 Implementing the game of PILLARS as a Multi-Agent System, and implementing MANUAL (human-controlled), RANDOM, REACTIVE, and UTILITARIAN AI for the agents.
 
-## The game of PILLARS
+# The game of PILLARS
 
 The game plays on a square Grid space of uneven side length (5, 7, 9...).
 
@@ -88,13 +88,11 @@ Possible model options: TODO
 
 How to change grid_size: TODO
 
-## Code Architechture
+# Code Architechture
 
-We use the mesa architecture.
+We use the mesa architecture. The GamerAgents interact within the Model each step according to a specific initiative pattern.
 
-The GamerAgents interact within the Model each step according to a specific initiative pattern.
-
-# Enums:
+## Enums:
 
 **Color** : Corresponds to team colors. Can be RED or BLUE.
 
@@ -102,7 +100,7 @@ The GamerAgents interact within the Model each step according to a specific init
 
 **Card** : These are the cards that can be in a team's hand, deck, or discard pile. Can be MOVE, or BUILD_PILLAR.
 
-# Classes:
+## Classes:
 
 **Message** :
 Messages are sent by gamer agents to the team.message_pile.
@@ -135,3 +133,5 @@ Pillars aren't scheduled in the scheduler because they aren't an agent in an SMA
 Their height is converted to a corresponding lightness value for visualizing purposes.
 
 **GamerAgent** :
+
+## Different AI implemented:
