@@ -485,8 +485,6 @@ class GamerAgent(mesa.Agent):
         
         for cell in neighborhood_cells:
             cell_tmp = (self.pos[0], self.pos[1])
-            print("CURR CELL:", cell_tmp)
-            print("NEIG CELL:", cell)
             if self.move_action(cell, test=True):
                 self.move_action(cell, raise_errors=True)
                 utility = self.utility()
@@ -494,8 +492,6 @@ class GamerAgent(mesa.Agent):
                     best_utility = utility
                     best_cell = cell
                     best_action = "move"
-                print("JE SUIS EN ", cell , "ET JAI UNE HAUTEUR", self.height)
-                print("CA BOUGE EN :", cell_tmp)
                 self.move_action(cell_tmp, raise_errors=True)
             if self.build_pillar_action(cell, test=True):
                 self.build_pillar_action(cell, raise_errors=True)
