@@ -72,7 +72,7 @@ The remainder of the turn isn't influenced by this, but on the NEXT turn, steve 
 Just as long as florian doesn't want to act first too...
 
 **Why would an agent want to play first?** Maybe an agent acts last and DOESN'T have a certain card accessible.
-Acting first next turn will give him the most options to choose from.
+Acting first next turn will give him the most options to choose from. Also, if it CAN'T use the available cards it has, it MUST switch its initiative.
 
 ## A generic "Turn":
 
