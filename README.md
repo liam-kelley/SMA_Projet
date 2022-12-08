@@ -1,6 +1,6 @@
 # SMA_Projet
 
-Implementing the game of PILLARS as a Multi-Agent System, and implementing MANUAL, RANDOM, REACTIVE, and Belief-Desire-Intention AI for the agents.
+Implementing the game of PILLARS as a Multi-Agent System, and implementing MANUAL (human-controlled), RANDOM, REACTIVE, and UTILITARIAN AI for the agents.
 
 ## The game of PILLARS
 
@@ -17,7 +17,11 @@ The first team to have a GamerAgent reach the top of the center pillar wins.
 
 GamerAgents of a team have access to hand of Cards which is shared amongst all GamerAgents of a Team.
 This hand will have a (num_gamers_per_team) of cards in it. These can be MOVE or a BUILD_PILLAR cards.
-So for 3 players, a hand can look like: Card.MOVE * 3, or Card.MOVE * 2 + Card.BUILD_PILLAR, or Card.MOVE + Card.BUILD_PILLAR * 2, or Card.BUILD_PILLAR * 3
+So for 3 players, a hand can look like any of these options:
+    Card.MOVE * 3
+    Card.MOVE * 2 + Card.BUILD_PILLAR
+    Card.MOVE + Card.BUILD_PILLAR * 2
+    Card.BUILD_PILLAR * 3
 
 An agent playing one of these cards can either:
 - USE the corresponding MOVE or BUILD_PILLAR action.
@@ -48,9 +52,9 @@ When a GamerAgent acts, they MAY want to become to become first initiative.
 Say steveAgent wants to become first initiative. Here's what happens
 
 Initial state:
-Team_Blue_Initiative_Pile=[catherineAgent, liamAgent, steveAgent, florianAgent]
+Team_Blue_Initiative_Pile = catherineAgent, liamAgent, steveAgent, florianAgent 
 New state after steve becomes first initiative:
-Team_Blue_Initiative_Pile=[steveAgent, catherineAgent, liamAgent, florianAgent]
+Team_Blue_Initiative_Pile= steveAgent, catherineAgent, liamAgent, florianAgent
 
 Steve moves first, the others before him move 1 back in the initiative pile.
 The remainder of the turn isn't influenced by this, but on the NEXT turn, steve will act first.
@@ -58,8 +62,17 @@ Just as long as florian doesn't want to act first too...
 
 ## A generic "Turn":
 
+TODO
 
+## Setup and running the model
 
+Clone the repository.
+
+Libraries needed: TODO
+
+Possible model options: TODO
+
+How to change grid_size: TODO
 
 ## Code Architechture
 
@@ -67,14 +80,16 @@ We use the mesa architecture.
 
 The GamerAgents interact within the Model each step according to a specific initiative pattern.
 
-Enums:
+# Enums:
+
 1. Color : Corresponds to team colors. Can be RED or BLUE
 
-2. AI : Corresponds to what drives each team's agents. Can be MANUAL, RANDOM, REACTIVE, BDI
+2. AI : Corresponds to what drives each team's agents. Can be RANDOM, REACTIVE, UTILITY.
 
 3. Card : These are the cards that can be in a team's hand, deck, or discard pile. Can be MOVE, or BUILD_PILLAR
 
-Classes:
+# Classes:
+
 1. Message :
 Messages are sent by gamer agents to the team.message_pile.
 They can then be read by other agents for them to have their desires accomodated.
