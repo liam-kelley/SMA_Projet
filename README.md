@@ -18,10 +18,10 @@ The first team to have a GamerAgent reach the top of the center pillar wins.
 GamerAgents of a team have access to hand of Cards which is shared amongst all GamerAgents of a Team.
 This hand will have a (num_gamers_per_team) of cards in it. These can be MOVE or a BUILD_PILLAR cards.
 So for 3 players, a hand can look like any of these options:
-    Card.MOVE * 3
-    Card.MOVE * 2 + Card.BUILD_PILLAR
-    Card.MOVE + Card.BUILD_PILLAR * 2
-    Card.BUILD_PILLAR * 3
+- Card.MOVE * 3
+- Card.MOVE * 2 + Card.BUILD_PILLAR
+- Card.MOVE + Card.BUILD_PILLAR * 2
+- Card.BUILD_PILLAR * 3
 
 An agent playing one of these cards can either:
 - USE the corresponding MOVE or BUILD_PILLAR action.
