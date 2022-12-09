@@ -89,7 +89,7 @@ AI behaviours are described later in this file.
 
 Clone the repository.
 
-**Libraries needed** : You should have mesa and numpy installed for the code to run properly.
+**Libraries needed** : Python=3.7, mesa, numpy
 
 **Possible model options** : Mesa's interface can be used to select different options on the board. The number of players in a team, the height of the central pillar, the behaviour used for any of the two AIs and whether or not there is a human playing the game.
 
