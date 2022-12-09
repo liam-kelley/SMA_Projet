@@ -89,11 +89,11 @@ AI behaviours are described later in this file.
 
 Clone the repository.
 
-Libraries needed: You should have mesa and numpy installed for the code to run properly.
+**Libraries needed** : You should have mesa and numpy installed for the code to run properly.
 
-Possible model options: Mesa's interface can be used to select different options on the board : the number of players in a team, the height of the central pillar, the behaviour used for any of the two AIs and if there is a human playing the game.
+**Possible model options** : Mesa's interface can be used to select different options on the board. The number of players in a team, the height of the central pillar, the behaviour used for any of the two AIs and whether or not there is a human playing the game.
 
-How to change grid_size: Because the size of the grid cannot be passed as a user settable argument to the game model we need to find another way. The size is thus initialised at the launch of the script after calling the main file, and it will only work if the argument is an odd number that is superior to 5. Passing no argument will initialise size_grid to 5.
+**How to change grid_size** : Because the size of the grid cannot be passed as a user settable argument to the game model we need to find another way. The size is thus initialised at the launch of the script after calling the main file, and it will only work if the argument is an odd number that is superior to 5. Passing no argument will initialise size_grid to 5.
 
 # Code Architechture
 
