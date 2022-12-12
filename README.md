@@ -187,3 +187,7 @@ Every one of these criteria has its own weight in the utility function, so that 
 
 **PLAYER** : Finally, the behaviour can be controlled by a human player via a command line. One just needs to pass the desired action as (move/build) + (up/down/left/right), or (no action) if one wants to set initiative to first for the next round. The script should check if the desired action is doable and ask until a valid command is given.
 **IMPORTANT NOTE: BECAUSE OF THE WHILE TRUE LOOP, THE CTRL+C COMMAND DOESN'T WORK TO KILL THE SCRIPT, BUT ONE CAN DO IT BY ENTERING "KILL LOOP" WHILE ENTERING THE DESIRED ACTION**
+
+# Credits
+
+This repository was created by Liam Kelley and Florian Perrocheau.
